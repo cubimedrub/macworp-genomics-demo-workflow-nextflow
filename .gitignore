@@ -1,0 +1,7 @@
+genome_index/
+in/ref/
+*.log*
+results/
+work/
+.DS_Store
+.nextflow
