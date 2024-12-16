@@ -1,26 +1,48 @@
 #!/usr/bin/env nextflow
 
-//Workflow to 
-// 1) generate  genome index (optional)
-// 2) align reads to a reference genome (index)
+// Workflow to 
+// 1) Generate genome index (optional)
+// 2) Align reads to a reference genome (index)
 // Quick start: 
 // Start with "nextflow run main.nf" (using default parameters and example input files) (nextflow needs to be installed)
-// 
+// Attention: Docker and nextflow need to installed
 // Custom start:
-// Adjust parameters in nexflow.config!
-
-
-
+// Adjust parameters in nextflow.config!
 
 nextflow.enable.dsl=2
 
+// Process to download the reference genome if a URL is provided
+process DownloadGenome {
+    input:
+    val refGenomePathOrUrl // Path to local file or URL
 
+    output:
+    path "refGenome.fa"
 
+    script:
+    """
+    if [[ ${refGenomePathOrUrl} =~ ^http ]]; then
+        echo "Downloading reference genome from URL: ${refGenomePathOrUrl}"
+        curl -L -o refGenome.fa.gz ${refGenomePathOrUrl}
+        echo "Decompressing the downloaded file..."
+        gunzip -c refGenome.fa.gz > refGenome.fa
+    else
+        echo "Using local reference genome file: ${refGenomePathOrUrl}"
+        if [[ ${refGenomePathOrUrl} == *.gz ]]; then
+            echo "Decompressing the local gzipped file..."
+            gunzip -c ${refGenomePathOrUrl} > refGenome.fa
+        else
+            echo "Copying the local reference genome file..."
+            cp ${refGenomePathOrUrl} refGenome.fa
+        fi
+    fi
+    """
+}
 
-// Process for indexing the genome with STAR
+// Process to generate the STAR genome index
 process STARIndex {
     input:
-    path refGenome
+    path refGenome // Downloaded or local reference genome
 
     output:
     path "genome_index"
@@ -28,11 +50,11 @@ process STARIndex {
     script:
     """
     mkdir -p genome_index
-    STAR --runMode genomeGenerate --genomeDir genome_index --genomeFastaFiles $refGenome
+    STAR --runMode genomeGenerate --genomeDir genome_index --genomeFastaFiles ${refGenome} --genomeSAsparseD 2
     """
 }
 
-// Process for aligning FASTQ reads with STAR
+// Process to align reads using STAR
 process AlignReads {
     publishDir "${params.outdir}/STAR_Alignments", mode: 'copy'
 
@@ -53,23 +75,7 @@ process AlignReads {
     """
 }
 
-// Process for quality control with MultiQC
-/*process MultiQC {
-    publishDir "${params.outdir}/MultiQC", mode: 'copy'
-
-    input:
-    path "${params.outdir}/STAR_Alignments/*_Aligned.out.bam"
-
-    output:
-    path "multiqc_report.html"
-
-    script:
-    """
-    multiqc ${params.outdir}/STAR_Alignments -o .
-    """
-}*/
-
-// Read sample sheet and start workflow
+// Workflow definition
 workflow {
     // Load sample information
     samples = Channel.fromPath(params.sampleSheet)
@@ -82,10 +88,8 @@ workflow {
                  }
     samples.view()
 
-    // Define the workflow order
-    STARIndex(params.refGenome) 
-    AlignReads(STARIndex.out,samples)
-    //MultiQC(AlignReads.out)
-
-    
+    // Define workflow order
+    refGenome = DownloadGenome(params.refGenomePathOrUrl)
+    genomeIndex = STARIndex(refGenome)
+    AlignReads(genomeIndex, samples)
 }
