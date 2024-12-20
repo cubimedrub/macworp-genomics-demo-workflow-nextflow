@@ -50,7 +50,7 @@ process STARIndex {
     script:
     """
     mkdir -p genome_index
-    STAR --runMode genomeGenerate --genomeDir genome_index --genomeFastaFiles ${refGenome} --genomeSAsparseD 2
+    STAR --runMode genomeGenerate --genomeDir genome_index --genomeFastaFiles ${refGenome}
     """
 }
 
