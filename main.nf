@@ -13,6 +13,8 @@ nextflow.enable.dsl=2
 
 // Process to download the reference genome if a URL is provided
 process DownloadGenome {
+    container "curlimages/curl:8.13.0"
+
     input:
     val refGenomePathOrUrl // Path to local file or URL
 
