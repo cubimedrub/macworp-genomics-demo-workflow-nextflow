@@ -13,7 +13,7 @@ nextflow.enable.dsl=2
 
 // Process to download the reference genome if a URL is provided
 process DownloadGenome {
-    container "curlimages/curl:8.13.0"
+    container "quay.io/medbioinf/base-tools:1.0.0"
 
     input:
     val refGenomePathOrUrl // Path to local file or URL
@@ -29,7 +29,7 @@ process DownloadGenome {
 }
 
 process UnzipReference {
-    container "actions/gzip"
+    container "quay.io/medbioinf/base-tools:1.0.0"
 
     input:
     path refGenome // Downloaded genome file
