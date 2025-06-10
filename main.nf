@@ -47,6 +47,7 @@ process UnzipReference {
 process STARIndex {
     container 'quay.io/biocontainers/star:2.6.1d--0'
     maxForks 1 // STAR index generation is resource-intensive, limit to one fork
+    cpus 8
 
     input:
     path refGenome // Downloaded or local reference genome
@@ -57,7 +58,7 @@ process STARIndex {
     script:
     """
     mkdir -p genome_index
-    STAR --runMode genomeGenerate --genomeDir genome_index --genomeFastaFiles ${refGenome}
+    STAR --runThreadN 8 --runMode genomeGenerate --genomeDir genome_index --genomeFastaFiles ${refGenome}
     """
 }
 
