@@ -19,25 +19,27 @@ process DownloadGenome {
     val refGenomePathOrUrl // Path to local file or URL
 
     output:
+    path "refGenome.fa.gz"
+
+    script:
+    """
+    echo "Downloading reference genome from: curl -v -k -L -o refGenome.fa.gz '${refGenomePathOrUrl}"
+    curl -v -k -L -o refGenome.fa.gz '${refGenomePathOrUrl}'
+    """
+}
+
+process UnzipReference {
+    container "actions/gzip"
+
+    input:
+    path refGenome // Downloaded genome file
+
+    output:
     path "refGenome.fa"
 
     script:
     """
-    if [[ ${refGenomePathOrUrl} =~ ^http ]]; then
-        echo "Downloading reference genome from URL: ${refGenomePathOrUrl}"
-        curl -L -o refGenome.fa.gz ${refGenomePathOrUrl}
-        echo "Decompressing the downloaded file..."
-        gunzip -c refGenome.fa.gz > refGenome.fa
-    else
-        echo "Using local reference genome file: ${refGenomePathOrUrl}"
-        if [[ ${refGenomePathOrUrl} == *.gz ]]; then
-            echo "Decompressing the local gzipped file..."
-            gunzip -c ${refGenomePathOrUrl} > refGenome.fa
-        else
-            echo "Copying the local reference genome file..."
-            cp ${refGenomePathOrUrl} refGenome.fa
-        fi
-    fi
+    gunzip -c ${refGenome} > refGenome.fa
     """
 }
 
@@ -96,6 +98,7 @@ workflow {
 
     // Define workflow order
     refGenome = DownloadGenome(params.refGenomePathOrUrl)
+    refGenome = UnzipReference(refGenome)
     genomeIndex = STARIndex(refGenome)
     AlignReads(genomeIndex, samples)
 }
